@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Журнал Странствий — Dark Souls</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cormorant Garamond (Headers/UI) & PT Serif (Parchment Body Text) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --gold-light: #ffe299;
+            --gold-dim: #9e824c;
+            --ember-orange: #ff6a00;
+            --ember-red: #b82900;
+            --parchment-bg: #bfB8A8;
+            --parchment-dark: #8c8372;
+        }
+
+        * {
+            user-select: none;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b0d10;
+            font-family: 'Cormorant Garamond', serif;
+            color: #d8d4cb;
+        }
+
+        /* Atmospheric Background */
+        .bg-scene {
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(circle at 50% 72%, rgba(255, 105, 20, 0.22) 0%, rgba(160, 45, 5, 0.08) 22%, transparent 50%),
+                radial-gradient(circle at 38% 28%, rgba(68, 81, 94, 0.35) 0%, rgba(20, 25, 32, 0.85) 60%, #07080a 100%);
+            z-index: 0;
+        }
+
+        /* Heavy Vignette & Mist Overlay */
+        .vignette {
+            position: absolute;
+            inset: 0;
+            box-shadow: inset 0 0 130px 45px rgba(0, 0, 0, 0.92);
+            background: linear-gradient(180deg, rgba(5,7,9,0.55) 0%, transparent 25%, transparent 75%, rgba(5,7,9,0.85) 100%);
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        /* Metallic Text Styling for "ЖУРНАЛ СТРАНСТВИЙ" */
+        .journal-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            background: linear-gradient(180deg, #e8e4dc 0%, #a9a296 55%, #6e685f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0px 3px 6px rgba(0, 0, 0, 0.9));
+        }
+
+        /* Active Quest Item Highlight matching reference */
+        .quest-item {
+            position: relative;
+            transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+            border-top: 1px solid transparent;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .quest-item:hover:not(.active) {
+            background: linear-gradient(90deg, rgba(190, 155, 95, 0.08) 0%, transparent 85%);
+            transform: translateX(4px);
+        }
+
+        .quest-item.active {
+            background: linear-gradient(90deg, rgba(168, 128, 56, 0.32) 0%, rgba(110, 82, 34, 0.16) 55%, transparent 100%);
+            border-top: 1px solid rgba(235, 195, 115, 0.45);
+            border-bottom: 1px solid rgba(235, 195, 115, 0.45);
+            box-shadow: inset 0 0 25px rgba(212, 160, 68, 0.12);
+        }
+
+        /* Glowing top & bottom flares on active quest */
+        .quest-item.active::before,
+        .quest-item.active::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 85%;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255, 223, 140, 0.9) 0%, rgba(214, 165, 75, 0.3) 60%, transparent 100%);
+        }
+        .quest-item.active::before { top: -1px; }
+        .quest-item.active::after { bottom: -1px; }
+
+        /* Left Vertical Timeline Line & Glowing Diamond Indicator */
+        .timeline-track {
+            position: absolute;
+            left: 0;
+            top: 8px;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, 
+                rgba(195, 175, 135, 0.7) 0%, 
+                rgba(140, 130, 115, 0.35) 70%, 
+                rgba(90, 85, 75, 0.15) 100%);
+        }
+
+        .timeline-diamond {
+            position: absolute;
+            left: -6px;
+            width: 14px;
+            height: 14px;
+            transition: top 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            filter: drop-shadow(0 0 8px rgba(255, 215, 110, 0.95)) drop-shadow(0 0 15px rgba(255, 160, 40, 0.8));
+            z-index: 10;
+        }
+
+        /* Right Panel: Gothic Iron Frame & Aged Parchment */
+        .iron-frame {
+            position: relative;
+            background: #1a1917;
+            padding: 12px;
+            border: 2px solid #3c3832;
+            box-shadow: 
+                0 25px 60px rgba(0, 0, 0, 0.95),
+                0 0 0 1px #0d0c0b,
+                inset 0 0 12px rgba(0, 0, 0, 0.95);
+            background-image: 
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 2px, transparent 2px, transparent 6px),
+                linear-gradient(135deg, #2e2b27 0%, #171513 50%, #292623 100%);
+        }
+
+        .parchment-page {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: #c2bba8;
+            background-image: 
+                radial-gradient(circle at 50% 45%, rgba(226, 220, 205, 0.7) 0%, rgba(182, 173, 154, 0.6) 65%, rgba(118, 108, 90, 0.88) 100%),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.09'/%3E%3C/svg%3E");
+            box-shadow: 
+                inset 0 0 38px rgba(35, 28, 18, 0.78),
+                inset 0 0 12px rgba(20, 15, 10, 0.9),
+                0 0 2px rgba(0,0,0,0.8);
+            border: 1px solid #595143;
+            color: #1c1813;
+            font-family: 'PT Serif', serif;
+        }
+
+        /* Distressed Stains on Parchment */
+        .parchment-page::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(circle at 12% 18%, rgba(82, 68, 48, 0.18) 0%, transparent 28%),
+                radial-gradient(circle at 88% 82%, rgba(72, 58, 40, 0.24) 0%, transparent 34%),
+                radial-gradient(circle at 80% 12%, rgba(65, 52, 36, 0.2) 0%, transparent 25%);
+            pointer-events: none;
+        }
+
+        /* Sketch Illustration Container with Soft Vignette Fade */
+        .sketch-wrapper {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            mask-image: radial-gradient(ellipse 92% 88% at 50% 48%, black 62%, transparent 100%);
+            -webkit-mask-image: radial-gradient(ellipse 92% 88% at 50% 48%, black 62%, transparent 100%);
+        }
+
+        /* Custom Parchment Checkbox */
+        .ds-checkbox {
+            width: 18px;
+            height: 18px;
+            min-width: 18px;
+            border: 1.5px solid #453d31;
+            background: rgba(135, 124, 104, 0.35);
+            box-shadow: inset 0 1px 4px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.25);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .objective-row:hover .ds-checkbox {
+            border-color: #1f1912;
+            background: rgba(115, 102, 82, 0.5);
+        }
+
+        /* Left Quest List To-Do Completion Checkbox */
+        .quest-status-check {
+            width: 24px;
+            height: 24px;
+            min-width: 24px;
+            border: 1.5px solid rgba(158, 130, 76, 0.55);
+            background: rgba(15, 14, 12, 0.75);
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.9);
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .quest-status-check:hover {
+            border-color: #ffe299;
+            box-shadow: 0 0 10px rgba(255, 185, 65, 0.45), inset 0 0 6px rgba(255, 185, 65, 0.2);
+            transform: scale(1.08);
+        }
+
+        .quest-status-check.completed {
+            border-color: #e6b85c;
+            background: radial-gradient(circle, rgba(168, 115, 32, 0.55) 0%, rgba(45, 32, 12, 0.95) 100%);
+            box-shadow: 0 0 12px rgba(255, 175, 45, 0.5);
+        }
+
+        /* Completed Quest Strikethrough & Ash Styling */
+        .quest-item.quest-completed .quest-title-text {
+            text-decoration: line-through;
+            text-decoration-color: rgba(218, 175, 92, 0.75);
+            text-decoration-thickness: 1.5px;
+            color: #8c8578 !important;
+        }
+
+        .quest-item.quest-completed .quest-subtitle-text {
+            color: #635e54 !important;
+        }
+
+        .quest-item.quest-completed .quest-icon-wrap {
+            filter: grayscale(0.75) opacity(0.6);
+        }
+
+        /* Wax Seal Stamp on Parchment for Completed Quests */
+        .wax-seal {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            z-index: 25;
+            pointer-events: none;
+            transform: rotate(-11deg) scale(1);
+            animation: stampIn 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55));
+        }
+
+        @keyframes stampIn {
+            0% { transform: rotate(-22deg) scale(1.8); opacity: 0; }
+            100% { transform: rotate(-11deg) scale(1); opacity: 1; }
+        }
+
+        /* Dark Souls "ЗАДАНИЕ ВЫПОЛНЕНО" Macro Banner Overlay */
+        #dsBannerOverlay {
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.65s ease;
+        }
+
+        #dsBannerOverlay.show {
+            opacity: 1;
+        }
+
+        .ds-banner-bar {
+            background: linear-gradient(180deg, 
+                transparent 0%, 
+                rgba(5, 5, 5, 0.75) 20%, 
+                rgba(8, 7, 6, 0.92) 50%, 
+                rgba(5, 5, 5, 0.75) 80%, 
+                transparent 100%);
+            border-top: 1px solid rgba(195, 155, 75, 0.25);
+            border-bottom: 1px solid rgba(195, 155, 75, 0.25);
+        }
+
+        .ds-banner-text {
+            font-family: 'Cormorant Garamond', serif;
+            letter-spacing: 0.22em;
+            color: #f3d58d;
+            text-shadow: 
+                0 0 18px rgba(255, 175, 45, 0.85),
+                0 0 38px rgba(215, 110, 15, 0.65),
+                0 4px 10px rgba(0, 0, 0, 0.95);
+            animation: bannerExpand 2.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes bannerExpand {
+            0% { transform: scale(0.92); letter-spacing: 0.14em; opacity: 0; }
+            25% { opacity: 1; }
+            100% { transform: scale(1.03); letter-spacing: 0.26em; opacity: 1; }
+        }
+
+        /* Animations for Bonfire & Embers */
+        @keyframes pulseFire {
+            0%, 100% { transform: scale(1) translateY(0); opacity: 0.92; }
+            25% { transform: scale(1.04, 0.97) translateY(1px); opacity: 1; }
+            50% { transform: scale(0.97, 1.05) translateY(-2px); opacity: 0.86; }
+            75% { transform: scale(1.03, 1.02) translateY(0px); opacity: 0.95; }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.55; transform: scale(1); }
+            50% { opacity: 0.82; transform: scale(1.08); }
+        }
+
+        @keyframes runeFlicker {
+            0%, 100% { filter: drop-shadow(0 0 6px #ff6a00) drop-shadow(0 0 12px #d43800); opacity: 0.95; }
+            50% { filter: drop-shadow(0 0 3px #ff4800) drop-shadow(0 0 6px #9e2200); opacity: 0.68; }
+        }
+
+        .fire-anim {
+            animation: pulseFire 2.7s infinite ease-in-out;
+            transform-origin: center bottom;
+        }
+
+        .fire-glow-anim {
+            animation: pulseGlow 3.2s infinite ease-in-out;
+        }
+
+        .rune-glow {
+            animation: runeFlicker 3s infinite ease-in-out;
+        }
+
+        /* Fade transition for switching quests */
+        .fade-transition {
+            transition: opacity 0.28s ease, transform 0.28s ease;
+        }
+        .fade-out {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+
+        /* Sleek Custom Dark-Gold Scrollbar for the 14-item Quest List & Parchment */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(12, 12, 14, 0.55);
+            border-left: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #6e5a38 0%, #9e824c 50%, #59472b 100%);
+            border-radius: 3px;
+            border: 1px solid rgba(255, 226, 153, 0.25);
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #8c7346 0%, #c7a45e 50%, #735c38 100%);
+        }
+    </style>
+</head>
+<body class="relative select-none flex items-center justify-center">
+
+    <!-- 1. BACKGROUND SCENE: Blurred Gothic Ruins + Glowing Bonfire in the Mist -->
+    <div class="bg-scene overflow-hidden">
+        <!-- Blurred Gothic Castle Ruin Silhouette & Ground (Matches center-middle reference) -->
+        <svg class="w-full h-full object-cover" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <filter id="bgBlur" x="-10%" y="-10%" width="120%" height="120%">
+                    <feGaussianBlur stdDeviation="10" />
+                </filter>
+                <filter id="heavyBlur" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="24" />
+                </filter>
+                <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#1c2229" />
+                    <stop offset="55%" stop-color="#303942" />
+                    <stop offset="100%" stop-color="#0d0e11" />
+                </linearGradient>
+                <radialGradient id="mistLight" cx="42%" cy="32%" r="45%">
+                    <stop offset="0%" stop-color="#697785" stop-opacity="0.45" />
+                    <stop offset="60%" stop-color="#2a323b" stop-opacity="0.2" />
+                    <stop offset="100%" stop-color="#0c0e12" stop-opacity="0" />
+                </radialGradient>
+                <radialGradient id="bonfireGroundGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#ff8826" stop-opacity="0.55" />
+                    <stop offset="35%" stop-color="#cc4400" stop-opacity="0.25" />
+                    <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+                </radialGradient>
+            </defs>
+
+            <!-- Sky & Mist -->
+            <rect width="1920" height="1080" fill="url(#skyGrad)" />
+            <rect width="1920" height="1080" fill="url(#mistLight)" />
+
+            <!-- Distant Castle Ruins (Blurred like depth-of-field in reference) -->
+            <g filter="url(#bgBlur)" opacity="0.88">
+                <!-- Far Left Ruin Wall -->
+                <path d="M150,1080 L150,480 L230,450 L310,490 L380,380 L430,380 L450,520 L650,550 L650,1080 Z" fill="#12161b" />
+                
+                <!-- Center-Left Iconic Gothic Cathedral / Keep -->
+                <path d="M770,1080 L770,320 L785,320 L785,345 L805,345 L805,320 L825,320 L825,345 L845,345 L845,320 L865,320 L865,410 
+                         L910,425 L945,350 L980,350 L995,435 L1035,440 
+                         L1035,160 L1055,160 L1055,190 L1080,190 L1080,160 L1105,160 L1105,190 L1130,190 L1130,160 L1155,160 L1155,340
+                         L1230,360 L1230,1080 Z" fill="#171c22" />
+                
+                <!-- Cathedral Highlights & Windows -->
+                <rect x="1065" y="220" width="22" height="55" rx="11" fill="#2c3540" opacity="0.45" />
+                <rect x="1105" y="220" width="22" height="55" rx="11" fill="#2c3540" opacity="0.45" />
+                <rect x="805" y="380" width="25" height="65" rx="12" fill="#29323c" opacity="0.35" />
+
+                <!-- Rocky Slopes & Ruined Arches -->
+                <path d="M580,750 Q720,620 890,680 L1260,650 L1450,820 L1450,1080 L400,1080 Z" fill="#101317" />
+            </g>
+
+            <!-- Soft Drifting Fog Layers -->
+            <g filter="url(#heavyBlur)" opacity="0.4">
+                <ellipse cx="680" cy="540" rx="390" ry="90" fill="#46525e" />
+                <ellipse cx="1050" cy="620" rx="340" ry="80" fill="#323b44" />
+            </g>
+
+            <!-- Foreground Dark Earth & Cracked Stones Around Bonfire -->
+            <g filter="url(#bgBlur)">
+                <ellipse cx="960" cy="960" rx="850" ry="260" fill="#0c0b0d" />
+                <!-- Warm reflection on rocky ground -->
+                <ellipse cx="950" cy="835" rx="330" ry="115" fill="url(#bonfireGroundGlow)" class="fire-glow-anim" />
+                
+                <!-- Scattered Stones & Ash Pile -->
+                <ellipse cx="950" cy="825" rx="95" ry="28" fill="#1e1714" />
+                <circle cx="910" cy="828" r="16" fill="#2b211b" />
+                <circle cx="945" cy="834" r="20" fill="#261c17" />
+                <circle cx="980" cy="829" r="15" fill="#30231b" />
+                <ellipse cx="780" cy="885" rx="60" ry="14" fill="#181616" />
+                <ellipse cx="830" cy="925" rx="85" ry="18" fill="#151314" />
+
+                <!-- Coiled Bonfire Sword plunged into ash -->
+                <g transform="translate(950, 745) rotate(8)">
+                    <!-- Blade -->
+                    <path d="M-4,80 L-2,-55 L0,-65 L2,-55 L4,80 Z" fill="#4a3b32" />
+                    <!-- Twisted Guard -->
+                    <path d="M-22,-52 Q0,-42 22,-52 Q12,-46 0,-46 Q-12,-46 -22,-52 Z" fill="#5c4738" stroke="#2a1e17" stroke-width="2" />
+                    <!-- Hilt & Pommel -->
+                    <rect x="-3" y="-85" width="6" height="32" fill="#3b2d24" />
+                    <circle cx="0" cy="-89" r="6" fill="#594639" />
+                </g>
+
+                <!-- Glowing Bonfire Flames (Blurred background depth matching reference) -->
+                <g class="fire-anim" transform="translate(950, 820)">
+                    <!-- Outer Orange Flame -->
+                    <path d="M-48,5 Q-60,-45 -22,-85 Q-5,-135 8,-155 Q22,-115 15,-85 Q48,-55 38,5 Z" fill="#ff5500" opacity="0.82" />
+                    <!-- Mid Warm Amber Flame -->
+                    <path d="M-32,8 Q-38,-35 -12,-72 Q4,-115 10,-125 Q18,-80 28,-35 Q30,5 0,10 Z" fill="#ff991f" opacity="0.9" />
+                    <!-- Bright Core -->
+                    <path d="M-18,6 Q-20,-28 -4,-58 Q6,-82 12,-45 Q18,-15 4,8 Z" fill="#fff0b8" />
+                    <!-- Detached Floating Flame Licks -->
+                    <circle cx="-18" cy="-110" r="8" fill="#ffae33" />
+                    <circle cx="22" cy="-95" r="7" fill="#ff7714" />
+                    <circle cx="2" cy="-145" r="6" fill="#ffbb44" />
+                </g>
+            </g>
+        </svg>
+    </div>
+
+    <!-- Ambient Floating Ember Particles Canvas -->
+    <canvas id="emberCanvas" class="absolute inset-0 pointer-events-none z-10"></canvas>
+
+    <!-- Heavy Atmospheric Vignette -->
+    <div class="vignette"></div>
+
+    <!-- DARK SOULS "ЗАДАНИЕ ВЫПОЛНЕНО" BANNER OVERLAY -->
+    <div id="dsBannerOverlay" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="ds-banner-bar w-full py-7 flex flex-col items-center justify-center relative">
+            <div id="dsBannerTitle" class="ds-banner-text text-3xl sm:text-5xl md:text-6xl font-semibold uppercase text-center px-4">
+                ЗАДАНИЕ ВЫПОЛНЕНО
+            </div>
+            <div id="dsBannerSub" class="text-[#b8ab93] text-xs sm:text-sm uppercase tracking-[0.35em] mt-1 opacity-80">
+                QUEST COMPLETED
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. FOUR ORNATE DARK-IRON CORNER BRACKETS WITH GLOWING EMBER RUNES -->
+    <!-- Top-Left Corner -->
+    <div class="fixed top-2 left-2 w-28 h-28 md:w-36 md:h-36 pointer-events-none z-30">
+        <svg viewBox="0 0 160 160" class="w-full h-full">
+            <!-- Dark Forged Iron Frame -->
+            <path d="M4,155 L4,18 L18,4 L155,4 L132,14 L68,16 C52,32 32,52 16,68 L14,132 Z" fill="#161514" stroke="#47423b" stroke-width="1.5"/>
+            <path d="M10,115 L10,24 L24,10 L115,10" fill="none" stroke="#6b6256" stroke-width="1" opacity="0.6"/>
+            <circle cx="34" cy="34" r="22" fill="#121110" stroke="#4f483f" stroke-width="1.5"/>
+            <!-- Glowing Rune -->
+            <g class="rune-glow">
+                <path d="M27,43 L34,23 L41,38 M29,33 L43,28" fill="none" stroke="#ff9d3b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="26" cy="26" r="1.5" fill="#ffb866"/>
+                <circle cx="42" cy="42" r="1.3" fill="#ff7700"/>
+            </g>
+        </svg>
+    </div>
+
+    <!-- Top-Right Corner -->
+    <div class="fixed top-2 right-2 w-28 h-28 md:w-36 md:h-36 pointer-events-none z-30">
+        <svg viewBox="0 0 160 160" class="w-full h-full">
+            <!-- Ember sparks behind corner -->
+            <g class="rune-glow">
+                <path d="M150,25 L154,120 M142,45 L156,95" stroke="#ff6a00" stroke-width="2" stroke-dasharray="3 8"/>
+                <circle cx="148" cy="78" r="3" fill="#ffae42"/>
+                <circle cx="152" cy="110" r="2" fill="#ff5500"/>
+            </g>
+            <!-- Dark Forged Iron Frame -->
+            <path d="M156,155 L156,18 L142,4 L5,4 L28,14 L92,16 C108,32 128,52 144,68 L146,132 Z" fill="#161514" stroke="#47423b" stroke-width="1.5"/>
+            <circle cx="126" cy="34" r="22" fill="#121110" stroke="#59493a" stroke-width="1.5"/>
+            <!-- Glowing Rune -->
+            <g class="rune-glow">
+                <path d="M118,30 L132,24 L125,44 M119,37 L135,35" fill="none" stroke="#ffaa44" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="135" cy="26" r="1.8" fill="#ffe099"/>
+            </g>
+        </svg>
+    </div>
+
+    <!-- Bottom-Left Corner -->
+    <div class="fixed bottom-2 left-2 w-28 h-28 md:w-36 md:h-36 pointer-events-none z-30">
+        <svg viewBox="0 0 160 160" class="w-full h-full">
+            <!-- Ember sparks -->
+            <g class="rune-glow">
+                <path d="M10,135 L14,45 M18,115 L8,70" stroke="#ff6a00" stroke-width="2.2" stroke-dasharray="4 7"/>
+                <circle cx="12" cy="85" r="2.5" fill="#ffae42"/>
+                <circle cx="16" cy="55" r="2" fill="#ff5500"/>
+            </g>
+            <!-- Dark Forged Iron Frame -->
+            <path d="M4,5 L4,142 L18,156 L155,156 L132,146 L68,144 C52,128 32,108 16,92 L14,28 Z" fill="#161514" stroke="#47423b" stroke-width="1.5"/>
+            <circle cx="34" cy="126" r="22" fill="#121110" stroke="#59493a" stroke-width="1.5"/>
+            <!-- Glowing Rune -->
+            <g class="rune-glow">
+                <path d="M26,122 L35,116 L32,136 M26,130 L42,125" fill="none" stroke="#ff9d3b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="40" cy="118" r="1.8" fill="#ffd280"/>
+            </g>
+        </svg>
+    </div>
+
+    <!-- Bottom-Right Corner -->
+    <div class="fixed bottom-2 right-2 w-28 h-28 md:w-36 md:h-36 pointer-events-none z-30">
+        <svg viewBox="0 0 160 160" class="w-full h-full">
+            <!-- Ember sparks -->
+            <g class="rune-glow">
+                <path d="M150,135 L146,45 M140,115 L152,65" stroke="#ff6a00" stroke-width="2.2" stroke-dasharray="4 8"/>
+                <circle cx="148" cy="82" r="3" fill="#ffae42"/>
+                <circle cx="142" cy="52" r="2" fill="#ff5500"/>
+            </g>
+            <!-- Dark Forged Iron Frame -->
+            <path d="M156,5 L156,142 L142,156 L5,156 L28,146 L92,144 C108,128 128,108 144,92 L146,28 Z" fill="#161514" stroke="#47423b" stroke-width="1.5"/>
+            <circle cx="126" cy="126" r="22" fill="#121110" stroke="#59493a" stroke-width="1.5"/>
+            <!-- Glowing Rune -->
+            <g class="rune-glow">
+                <path d="M119,134 L124,116 L134,128 L128,136 M118,124 L134,120" fill="none" stroke="#ffaa44" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="136" cy="133" r="1.8" fill="#ffe099"/>
+            </g>
+        </svg>
+    </div>
+
+    <!-- 3. MAIN JOURNAL INTERFACE CONTAINER -->
+    <main class="relative z-20 w-full max-w-[1480px] h-full max-h-[880px] px-8 sm:px-14 py-8 flex flex-col lg:flex-row items-stretch justify-between gap-8">
+        
+        <!-- LEFT PANEL: QUEST LIST ("ЖУРНАЛ СТРАНСТВИЙ") -->
+        <section class="w-full lg:w-[46%] flex flex-col pt-1 lg:pt-3 pl-2 lg:pl-4">
+            
+            <!-- Header Title, Progress Counter & Subtle Ornamental Divider -->
+            <header class="mb-4">
+                <div class="flex flex-wrap items-baseline justify-between gap-2 pr-2">
+                    <h1 class="journal-title text-3xl sm:text-4xl xl:text-[42px] uppercase tracking-wider pl-1">
+                        ЖУРНАЛ СТРАНСТВИЙ
+                    </h1>
+                    <!-- Progress & Filter Controls -->
+                    <div class="flex items-center gap-3">
+                        <span id="questProgressCounter" class="text-sm sm:text-base text-[#b8aa91] tracking-widest uppercase font-semibold">
+                            0 / 14 Выполнено
+                        </span>
+                        <button id="resetJournalBtn" title="Сбросить прогресс по умолчанию" class="text-xs uppercase tracking-wider text-[#7c7467] hover:text-[#e6c885] border border-[#3a352e] hover:border-[#8c7346] px-2 py-0.5 rounded transition">
+                            Сброс
+                        </button>
+                    </div>
+                </div>
+                <!-- Ornamental Thin Divider Under Title -->
+                <div class="relative w-full max-w-[460px] h-3 mt-1 flex items-center">
+                    <div class="w-full h-[1px] bg-gradient-to-r from-[#6e675b] via-[#9e9482] to-transparent"></div>
+                    <div class="absolute left-1/2 -translate-x-12 w-2 h-2 rotate-45 border border-[#9e9482] bg-[#16181c]"></div>
+                </div>
+            </header>
+
+            <!-- Quest List with Left Vertical Timeline & Diamond Node -->
+            <div class="relative flex-1 flex flex-col justify-between min-h-0">
+                <div id="questScrollWrapper" class="relative flex-1 pl-5 pr-3 overflow-y-auto custom-scroll">
+                    <div class="relative min-h-full">
+                        <!-- Vertical Line with bottom small diamond cap -->
+                        <div class="timeline-track">
+                            <div class="absolute -bottom-1.5 -left-[3px] w-2 h-2 rotate-45 border border-[#787063] bg-[#0e1014]"></div>
+                        </div>
+
+                        <!-- Animated Golden Diamond Node on Active Quest -->
+                        <div id="timelineDiamond" class="timeline-diamond" style="top: 34px;">
+                            <svg viewBox="0 0 20 20" class="w-full h-full">
+                                <polygon points="10,1 17,10 10,19 3,10" fill="#fff2bd" stroke="#d99b26" stroke-width="1.5"/>
+                                <polygon points="10,5 14,10 10,15 6,10" fill="#ffffff"/>
+                            </svg>
+                        </div>
+
+                        <!-- Interactive Quest Items Container -->
+                        <div id="questListContainer" class="flex flex-col space-y-1 pb-2">
+                            <!-- Rendered dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add New Custom Quest Input (To-Do List Extension) -->
+                <div class="mt-3 pt-3 pl-5 border-t border-[#2b2722]/80 pr-2 flex-shrink-0">
+                    <form id="addQuestForm" class="flex items-center gap-2">
+                        <input 
+                            id="newQuestInput" 
+                            type="text" 
+                            placeholder="Новое странствие (добавить игру в список)..." 
+                            class="w-full bg-[#121316]/85 border border-[#3d372e] focus:border-[#b89249] text-[#e0d8c8] placeholder-[#6e675c] text-base px-3 py-1.5 rounded-sm outline-none transition"
+                        />
+                        <button 
+                            type="submit" 
+                            class="flex-shrink-0 bg-[#241f19] hover:bg-[#382e21] text-[#dfc48b] border border-[#6b5735] px-3.5 py-1.5 text-sm uppercase tracking-wider font-semibold transition shadow-md">
+                            + Записать
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT PANEL: ORNATE GOTHIC IRON PARCHMENT CARD -->
+        <section class="w-full lg:w-[43%] xl:w-[41%] h-full flex items-center justify-center lg:justify-end">
+            <div class="iron-frame w-full max-w-[560px] h-full max-h-[790px] rounded-[2px] flex flex-col">
+                
+                <!-- Decorative Corner Rivets on Iron Frame -->
+                <div class="absolute top-1.5 left-1.5 w-2 h-2 rounded-full bg-[#4a443c] shadow-inner pointer-events-none"></div>
+                <div class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#4a443c] shadow-inner pointer-events-none"></div>
+                <div class="absolute bottom-1.5 left-1.5 w-2 h-2 rounded-full bg-[#4a443c] shadow-inner pointer-events-none"></div>
+                <div class="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full bg-[#4a443c] shadow-inner pointer-events-none"></div>
+
+                <!-- Aged Parchment Inner Page -->
+                <div class="parchment-page p-5 sm:p-7 flex flex-col justify-between overflow-y-auto custom-scroll">
+                    
+                    <!-- Medieval Wax Seal Stamp (Visible when quest is completed) -->
+                    <div id="parchmentSeal" class="wax-seal hidden">
+                        <svg viewBox="0 0 120 120" class="w-24 h-24 sm:w-28 sm:h-28">
+                            <defs>
+                                <radialGradient id="waxGrad" cx="40%" cy="35%" r="60%">
+                                    <stop offset="0%" stop-color="#a82820"/>
+                                    <stop offset="65%" stop-color="#6e140f"/>
+                                    <stop offset="100%" stop-color="#3d0805"/>
+                                </radialGradient>
+                            </defs>
+                            <!-- Irregular Wax Outer Blob -->
+                            <path d="M60,6 C78,4 94,14 105,28 C116,44 115,66 108,84 C99,102 82,114 62,115 C41,116 20,106 11,88 C2,70 5,45 16,27 C27,11 43,8 60,6 Z" fill="url(#waxGrad)" stroke="#2b0503" stroke-width="2"/>
+                            <!-- Inner Stamped Ring -->
+                            <circle cx="60" cy="60" r="40" fill="none" stroke="#d48c6a" stroke-width="1.5" stroke-dasharray="3 2" opacity="0.75"/>
+                            <circle cx="60" cy="60" r="35" fill="none" stroke="#360604" stroke-width="2"/>
+                            <!-- Bonfire Sword Emblem & Text -->
+                            <path d="M60,30 L60,72 M50,42 L70,42" stroke="#d99b72" stroke-width="2.5" stroke-linecap="round"/>
+                            <text x="60" y="85" text-anchor="middle" fill="#f2cbb1" font-family="Cormorant Garamond, serif" font-weight="700" font-size="11" letter-spacing="1.5">ИСПОЛНЕНО</text>
+                        </svg>
+                    </div>
+
+                    <div id="parchmentContent" class="fade-transition flex flex-col h-full justify-between">
+                        
+                        <!-- Top Section: Vintage Crosshatched Ink Etching Illustration -->
+                        <div>
+                            <div id="questIllustration" class="sketch-wrapper h-[205px] sm:h-[235px] mb-3 flex items-center justify-center">
+                                <!-- Injected via JS -->
+                            </div>
+
+                            <!-- Middle Section: Coherent Dark Souls Lore Text in Russian -->
+                            <div id="questLore" class="text-[15px] sm:text-[16.2px] leading-[1.45] text-[#1e1914] tracking-[0.01em] px-1">
+                                <!-- Injected via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Bottom Section: Subtle Divider + Interactive Checkboxes + Complete Quest Action -->
+                        <div class="mt-4 pt-2">
+                            <!-- Faint Ink Ornamental Divider Line -->
+                            <div class="w-full h-[1px] bg-gradient-to-r from-transparent via-[#6e6352] to-transparent opacity-65 mb-3"></div>
+
+                            <!-- Interactive Objectives List -->
+                            <div id="questObjectives" class="space-y-2.5 px-1 pb-2">
+                                <!-- Injected via JS -->
+                            </div>
+
+                            <!-- Add Sub-Objective Form + Toggle Whole Quest Button -->
+                            <div class="mt-3 pt-2.5 border-t border-[#7a6f5d]/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                                <form id="addObjectiveForm" class="flex items-center gap-1.5 flex-1">
+                                    <input 
+                                        id="newObjectiveInput" 
+                                        type="text" 
+                                        placeholder="+ Новая задача..." 
+                                        class="w-full bg-[#b0a792]/60 border border-[#6e6250] focus:border-[#2b2319] text-[#1a1510] placeholder-[#574d3f] text-sm px-2.5 py-1 rounded-sm outline-none font-serif"
+                                    />
+                                    <button type="submit" class="px-2.5 py-1 bg-[#4a3f31] hover:bg-[#332a20] text-[#e8dfc8] text-xs uppercase tracking-wider rounded-sm transition">
+                                        Добавить
+                                    </button>
+                                </form>
+
+                                <button 
+                                    id="toggleQuestCompleteBtn" 
+                                    type="button"
+                                    class="px-3.5 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider border transition rounded-sm shadow-sm">
+                                    Завершить задание
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 4. APPLICATION DATA, SVG ILLUSTRATIONS, AUDIO & INTERACTIVITY -->
+    <script>
+        /* --- Web Audio API Synthesizer for Subtle Dark Souls Parchment & Chime Sounds --- */
+        const SoundFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+            // Soft low resonant parchment switch sound
+            playSelect() {
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(145, now);
+                    osc.frequency.exponentialRampToValueAtTime(65, now + 0.22);
+
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } catch (e) {}
+            },
+            // Metallic rune check sound
+            playCheck(checked) {
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(checked ? 320 : 210, now);
+                    osc.frequency.exponentialRampToValueAtTime(checked ? 540 : 140, now + 0.18);
+
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } catch (e) {}
+            },
+            // Dramatic Dark Souls "Quest Completed" Resonant Bell Chord
+            playQuestComplete() {
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const freqs = [110, 164.81, 220, 277.18, 329.63, 440];
+                    freqs.forEach((f, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+                        osc.frequency.setValueAtTime(f, now);
+                        osc.frequency.exponentialRampToValueAtTime(f * 0.992, now + 2.2);
+
+                        gain.gain.setValueAtTime(0.001, now);
+                        gain.gain.linearRampToValueAtTime(0.065 / (idx * 0.4 + 1), now + 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.0008, now + 2.3);
+
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now);
+                        osc.stop(now + 2.35);
+                    });
+                } catch (e) {}
+            }
+        };
+
+        /* --- Custom Detailed Left-Panel Icons (SVGs matching reference image) --- */
+        const QuestIcons = {
+            bell: `
+                <svg viewBox="0 0 64 64" class="w-11 h-11 drop-shadow-[0_4px_6px_rgba(0,0,0,0.85)]">
+                    <defs>
+                        <linearGradient id="bellMetal" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#524f4a"/>
+                            <stop offset="35%" stop-color="#b8b2a6"/>
+                            <stop offset="55%" stop-color="#e6e1d6"/>
+                            <stop offset="85%" stop-color="#5e5a54"/>
+                            <stop offset="100%" stop-color="#36332f"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Bell Crown -->
+                    <path d="M26,12 C26,7 38,7 38,12 M23,15 L41,15" fill="none" stroke="#9e978b" stroke-width="2.5" stroke-linecap="round"/>
+                    <!-- Main Bell Body -->
+                    <path d="M22,15 C19,24 18,38 11,48 L53,48 C46,38 45,24 42,15 Z" fill="url(#bellMetal)" stroke="#2b2824" stroke-width="1.5"/>
+                    <!-- Decorative ridges on bell -->
+                    <path d="M20,23 L44,23 M17,39 L47,39 M15,43 L49,43" stroke="#3b3731" stroke-width="1.2" opacity="0.75"/>
+                    <!-- Rim & Clapper -->
+                    <ellipse cx="32" cy="48" rx="21" ry="4" fill="#3a3632" stroke="#8c8579" stroke-width="1"/>
+                    <circle cx="32" cy="53" r="4.5" fill="#7a7368" stroke="#24211d" stroke-width="1.2"/>
+                </svg>
+            `,
+            bonfire: `
+                <svg viewBox="0 0 64 64" class="w-11 h-11 drop-shadow-[0_4px_6px_rgba(0,0,0,0.85)]">
+                    <!-- Ash & Bones Base -->
+                    <ellipse cx="32" cy="52" rx="18" ry="5" fill="#3d322c" stroke="#1f1815" stroke-width="1.5"/>
+                    <path d="M18,51 L46,47 M20,47 L44,53" stroke="#786659" stroke-width="3" stroke-linecap="round"/>
+                    <!-- Coiled Sword -->
+                    <path d="M32,48 L34,10" stroke="#7a746b" stroke-width="2.2"/>
+                    <path d="M26,17 Q33,20 40,17" fill="none" stroke="#8c7a5b" stroke-width="2"/>
+                    <!-- Glowing Flames -->
+                    <path d="M20,48 Q16,32 27,22 Q29,12 33,8 Q38,20 36,26 Q47,30 43,48 Z" fill="#e05300" opacity="0.9"/>
+                    <path d="M24,48 Q22,35 30,26 Q33,18 36,30 Q41,37 38,48 Z" fill="#ff9e22"/>
+                    <path d="M28,48 Q28,38 32,32 Q36,38 35,48 Z" fill="#fff0a6"/>
+                </svg>
+            `,
+            vessel: `
+                <svg viewBox="0 0 64 64" class="w-11 h-11 drop-shadow-[0_4px_6px_rgba(0,0,0,0.85)]">
+                    <defs>
+                        <linearGradient id="vesselGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#45423d"/>
+                            <stop offset="45%" stop-color="#b5afa4"/>
+                            <stop offset="75%" stop-color="#6e6960"/>
+                            <stop offset="100%" stop-color="#33302c"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Pedestal Base -->
+                    <path d="M21,52 L43,52 L38,46 L26,46 Z" fill="url(#vesselGrad)" stroke="#24221f" stroke-width="1.2"/>
+                    <rect x="29" y="38" width="6" height="8" fill="url(#vesselGrad)" stroke="#24221f" stroke-width="1.2"/>
+                    <!-- Broad Lordvessel Bowl -->
+                    <path d="M12,20 C12,36 22,40 32,40 C42,40 52,36 52,20 Z" fill="url(#vesselGrad)" stroke="#24221f" stroke-width="1.5"/>
+                    <ellipse cx="32" cy="20" rx="20" ry="5" fill="#2e2b27" stroke="#9e978b" stroke-width="1.2"/>
+                    <!-- Engravings -->
+                    <path d="M16,26 Q32,32 48,26" fill="none" stroke="#38342e" stroke-width="1.5"/>
+                </svg>
+            `,
+            trophy: `
+                <svg viewBox="0 0 64 64" class="w-11 h-11 drop-shadow-[0_4px_6px_rgba(0,0,0,0.85)]">
+                    <!-- Handles -->
+                    <path d="M18,20 C9,20 9,34 20,35" fill="none" stroke="#8c867a" stroke-width="2.5"/>
+                    <path d="M46,20 C55,20 55,34 44,35" fill="none" stroke="#8c867a" stroke-width="2.5"/>
+                    <!-- Goblet Body -->
+                    <path d="M17,15 L47,15 C46,32 39,39 32,39 C25,39 18,32 17,15 Z" fill="url(#vesselGrad)" stroke="#262421" stroke-width="1.5"/>
+                    <ellipse cx="32" cy="15" rx="15" ry="3.5" fill="#2b2925" stroke="#a8a196" stroke-width="1"/>
+                    <!-- Stem & Foot -->
+                    <path d="M29,39 L29,48 L22,52 L42,52 L35,48 L35,39 Z" fill="url(#vesselGrad)" stroke="#262421" stroke-width="1.3"/>
+                </svg>
+            `,
+            cleaver: `
+                <svg viewBox="0 0 64 64" class="w-11 h-11 drop-shadow-[0_4px_6px_rgba(0,0,0,0.85)]">
+                    <!-- Hunter's Mark & Saw Cleaver Silhouette -->
+                    <path d="M32,10 L44,28 L36,28 L42,46 M32,10 L20,28 L28,28 L22,46 M32,24 L32,54" fill="none" stroke="#b82914" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="32" cy="19" r="3" fill="#ff7352"/>
+                </svg>
+            `,
+            katana: `
+                <svg viewBox="0 0 64 64" class="w-11 h-11 drop-shadow-[0_4px_6px_rgba(0,0,0,0.85)]">
+                    <!-- Crossed Shinobi & Samurai Blades -->
+                    <path d="M12,52 L50,12" stroke="#d4cfc4" stroke-width="2.8" stroke-linecap="round"/>
+                    <path d="M20,40 L26,46" stroke="#b59449" stroke-width="3.5" stroke-linecap="round"/>
+                    <path d="M52,52 L14,12" stroke="#9e978a" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M44,40 L38,46" stroke="#b59449" stroke-width="3.5" stroke-linecap="round"/>
+                </svg>
+            `,
+            lantern: `
+                <svg viewBox="0 0 64 64" class="w-11 h-11 drop-shadow-[0_4px_6px_rgba(0,0,0,0.85)]">
+                    <!-- Umbral / Gothic Lantern -->
+                    <circle cx="32" cy="11" r="4" fill="none" stroke="#8f887a" stroke-width="2"/>
+                    <polygon points="22,18 42,18 46,44 18,44" fill="#1e242b" stroke="#9c9382" stroke-width="2"/>
+                    <circle cx="32" cy="31" r="7" fill="#6bc2e6" opacity="0.85"/>
+                    <path d="M20,44 L44,44 L38,52 L26,52 Z" fill="#454038" stroke="#8f887a" stroke-width="1.5"/>
+                </svg>
+            `,
+            crown: `
+                <svg viewBox="0 0 64 64" class="w-11 h-11 drop-shadow-[0_4px_6px_rgba(0,0,0,0.85)]">
+                    <!-- Iron Crown / Archthrone -->
+                    <path d="M12,44 L16,20 L26,32 L32,14 L38,32 L48,20 L52,44 Z" fill="#7d7463" stroke="#d6c59e" stroke-width="1.8" stroke-linejoin="round"/>
+                    <rect x="12" y="44" width="40" height="6" fill="#4f483d" stroke="#b5a481" stroke-width="1.4"/>
+                    <circle cx="32" cy="36" r="3" fill="#ff842b"/>
+                </svg>
+            `
+        };
+
+        /* --- Vintage Crosshatched Ink Etching Illustrations for the 14 Quests --- */
+        const InkIllustrations = {
+            // Eclipse & Lothric Castle for Dark Souls 3
+            ds3: `
+                <svg viewBox="0 0 500 260" class="w-full h-full">
+                    <!-- Dark Sign Eclipse in Sky -->
+                    <circle cx="360" cy="72" r="42" fill="#1b1612" stroke="#e6a64c" stroke-width="3"/>
+                    <circle cx="360" cy="72" r="48" fill="none" stroke="#362c22" stroke-width="1.2" stroke-dasharray="4 3"/>
+                    <!-- Bleeding Fire Stream from Eclipse -->
+                    <path d="M358,114 Q355,165 348,235" stroke="#261e17" stroke-width="3.5"/>
+                    <!-- Lothric High Wall Spires -->
+                    <g stroke="#1b1612" stroke-width="1.5" fill="#8f8573">
+                        <path d="M40,245 L40,145 L65,110 L90,145 L90,245 Z"/>
+                        <path d="M90,245 L90,165 L145,165 L145,95 L175,45 L205,95 L205,165 L265,165 L265,245 Z" fill="#a39884"/>
+                        <polygon points="175,20 140,95 210,95" fill="#473e33"/>
+                        <path d="M265,245 L265,130 L290,85 L315,130 L315,245 Z"/>
+                        <!-- Flying Pilgrim Butterflies -->
+                        <path d="M60,55 Q95,35 125,65 M75,45 L110,75" fill="none" stroke="#241d15" stroke-width="1.4"/>
+                        <path d="M235,45 Q265,25 295,50 M250,35 L280,60" fill="none" stroke="#241d15" stroke-width="1.3"/>
+                    </g>
+                    <path d="M15,242 Q140,215 260,235 Q390,215 485,242" fill="#b8ae99" stroke="#241e18" stroke-width="1.5"/>
+                </svg>
+            `,
+            // Bloodborne Clocktower & Giant Paleblood Moon over Yharnam
+            bloodborne: `
+                <svg viewBox="0 0 500 260" class="w-full h-full">
+                    <!-- Giant Astral Clocktower Dial & Blood Moon -->
+                    <circle cx="250" cy="105" r="78" fill="#d9cfb8" stroke="#1c1611" stroke-width="2"/>
+                    <circle cx="250" cy="105" r="64" fill="none" stroke="#2b231b" stroke-width="1.2" stroke-dasharray="6 4"/>
+                    <!-- Runes inside Clocktower -->
+                    <path d="M250,42 L250,168 M187,105 L313,105 M206,61 L294,149 M294,61 L206,149" stroke="#2b231b" stroke-width="1.2" opacity="0.65"/>
+                    <!-- Gothic Spires of Yharnam -->
+                    <g stroke="#1a1410" stroke-width="1.5" fill="#3b3229">
+                        <polygon points="75,245 88,85 102,245"/>
+                        <polygon points="115,245 125,120 135,245"/>
+                        <polygon points="365,245 375,115 385,245"/>
+                        <polygon points="398,245 412,78 426,245"/>
+                        <!-- Hunter Silhouette on Bridge -->
+                        <path d="M232,240 L242,175 L258,175 L268,240 Z" fill="#1a1410"/>
+                        <!-- Tricorn Hat & Saw Cleaver -->
+                        <polygon points="228,172 250,156 272,172" fill="#1a1410"/>
+                        <path d="M262,192 L308,162 L298,184 Z" fill="#4f4336"/>
+                    </g>
+                </svg>
+            `,
+            // Lies of P: Mechanical Heart Gears, Puppet Strings & Krat Streetlamp
+            liesofp: `
+                <svg viewBox="0 0 500 260" class="w-full h-full">
+                    <!-- Puppet Strings from above -->
+                    <path d="M120,5 L195,125 M180,5 L225,110 M320,5 L275,110 M380,5 L305,125" stroke="#362e24" stroke-width="1" stroke-dasharray="4 3"/>
+                    <!-- Clockwork P-Organ Heart & Gears -->
+                    <g stroke="#1c1611" stroke-width="1.6" fill="#9c917d">
+                        <circle cx="250" cy="125" r="58" fill="#827866"/>
+                        <circle cx="250" cy="125" r="42" fill="#b8ae9a"/>
+                        <circle cx="250" cy="125" r="18" fill="#3b3228"/>
+                        <!-- Gear Teeth -->
+                        <path d="M250,58 L250,70 M250,180 L250,192 M183,125 L195,125 M305,125 L317,125 M202,77 L212,87 M288,163 L298,173 M298,77 L288,87 M212,163 L202,173" stroke="#1c1611" stroke-width="5"/>
+                    </g>
+                    <!-- Krat Belle Epoque Streetlight -->
+                    <g stroke="#1c1611" stroke-width="1.8" fill="none">
+                        <path d="M95,242 L95,75 Q95,45 125,45 L135,62"/>
+                        <polygon points="125,62 145,62 140,85 130,85" fill="#e6cfa1"/>
+                    </g>
+                    <!-- Rapier Blade Crossing -->
+                    <path d="M135,215 L375,65" stroke="#1c1611" stroke-width="2.5"/>
+                    <circle cx="155" cy="203" r="10" fill="none" stroke="#1c1611" stroke-width="2"/>
+                </svg>
+            `,
+            //Eastern Tori Gate, Katana & Mount Ashina (Sekiro / Nioh / Wo Long / Wukong)
+            eastern: `
+                <svg viewBox="0 0 500 260" class="w-full h-full">
+                    <!-- Misty Mountain Peak & Full Moon -->
+                    <circle cx="145" cy="78" r="46" fill="#dfd7c6" stroke="#2b241c" stroke-width="1.2"/>
+                    <path d="M20,240 L155,115 L245,190 L355,75 L480,240 Z" fill="#9c927e" stroke="#241e18" stroke-width="1.4"/>
+                    <!-- Pagoda / Castle Roof Silhouette -->
+                    <g stroke="#1a1510" stroke-width="1.6" fill="#3d342b">
+                        <path d="M310,125 Q355,115 400,125 L385,110 L325,110 Z"/>
+                        <path d="M320,102 Q355,92 390,102 L375,88 L335,88 Z"/>
+                        <rect x="332" y="125" width="46" height="35" fill="#7a705f"/>
+                    </g>
+                    <!-- Foreground Torii Gate / Shrine Arch -->
+                    <g stroke="#1a1510" stroke-width="2" fill="#4f4438">
+                        <path d="M85,135 Q165,148 245,135 L240,145 Q165,155 90,145 Z"/>
+                        <rect x="102" y="158" width="126" height="6"/>
+                        <rect x="115" y="145" width="9" height="95"/>
+                        <rect x="206" y="145" width="9" height="95"/>
+                    </g>
+                </svg>
+            `,
+            // Napoleonic Muskets, Saber & Plague Crow for Valor Mortis
+            napoleonic: `
+                <svg viewBox="0 0 500 260" class="w-full h-full">
+                    <!-- Ruined Cannon Wheel & Battlefield Smoke -->
+                    <circle cx="155" cy="185" r="48" fill="none" stroke="#241d16" stroke-width="4"/>
+                    <circle cx="155" cy="185" r="10" fill="#241d16"/>
+                    <path d="M155,137 L155,233 M107,185 L203,185 M121,151 L189,219 M189,151 L121,219" stroke="#241d16" stroke-width="2"/>
+                    <!-- Crossed Flintlock Musket & Cavalry Saber -->
+                    <path d="M95,225 L385,45" stroke="#1a1510" stroke-width="4.5" stroke-linecap="round"/>
+                    <path d="M385,45 L425,22" stroke="#3b3228" stroke-width="2"/>
+                    <path d="M395,225 C315,155 215,95 115,45" fill="none" stroke="#1a1510" stroke-width="3.5"/>
+                    <path d="M375,218 C390,202 408,215 395,230" fill="none" stroke="#1a1510" stroke-width="3"/>
+                    <!-- Tattered Banner -->
+                    <path d="M285,35 L285,235 M285,42 L365,62 L345,95 L368,122 L285,132" fill="#7d7261" stroke="#1a1510" stroke-width="1.6"/>
+                </svg>
+            `,
+            // Default classical Dark Souls engravings (bells, oscar, lordvessel, lordsouls)
+            bells: `
+                <svg viewBox="0 0 500 260" class="w-full h-full">
+                    <defs>
+                        <pattern id="hatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                            <line x1="0" y1="0" x2="0" y2="6" stroke="#2b241d" stroke-width="0.7" opacity="0.45" />
+                        </pattern>
+                        <pattern id="crosshatch" width="6" height="6" patternUnits="userSpaceOnUse">
+                            <path d="M0,0 L6,6 M6,0 L0,6" stroke="#241e18" stroke-width="0.6" opacity="0.35" />
+                        </pattern>
+                    </defs>
+
+                    <!-- Sky Ink Wash & Crosshatched Framing Clouds -->
+                    <path d="M15,40 Q90,10 180,55 Q250,25 330,55 Q410,15 485,45 L485,245 L15,245 Z" fill="url(#hatch)" opacity="0.5"/>
+                    
+                    <!-- Swirling Clouds & Smoke at Base of Tower -->
+                    <g stroke="#231d17" stroke-width="1.3" fill="#cfc7b4">
+                        <path d="M10,235 Q45,195 95,212 Q125,172 178,195 Q215,165 255,198 Q295,168 345,195 Q388,165 435,202 Q468,190 492,235 Z" fill="url(#crosshatch)"/>
+                        <path d="M35,175 Q75,140 128,162 Q165,120 218,155 Q275,125 322,162 Q365,125 418,160 Q455,145 478,185" fill="none" stroke-width="1.2"/>
+                        <path d="M65,215 Q115,185 168,210 M315,215 Q365,185 425,212" fill="none" stroke-width="1.1"/>
+                    </g>
+
+                    <!-- Left Gargoyle / Wyvern Silhouette & Wing Etching -->
+                    <g stroke="#1b1612" stroke-width="1.3" fill="#3a3229">
+                        <path d="M125,48 C88,12 45,22 22,42 C48,42 65,54 74,70 C92,55 108,54 125,56 Z"/>
+                        <path d="M138,46 C168,14 205,18 228,34 C198,38 182,48 172,62 C158,52 146,52 138,54 Z"/>
+                        <path d="M118,40 L132,35 L142,48 L135,68 C122,85 128,108 158,122 C132,116 112,95 122,65 Z"/>
+                    </g>
+
+                    <!-- Right Gargoyle / Wyvern -->
+                    <g stroke="#1b1612" stroke-width="1.3" fill="#3a3229">
+                        <path d="M368,46 C338,18 308,24 288,38 C312,38 332,46 342,58 C352,50 360,50 368,52 Z"/>
+                        <path d="M376,46 C408,16 442,24 466,44 C438,44 418,54 408,68 C395,54 385,54 376,54 Z"/>
+                        <path d="M365,38 L376,34 L382,48 L372,66 C362,82 372,98 392,108 C368,102 356,85 366,62 Z"/>
+                    </g>
+
+                    <!-- Central Undead Parish Bell Tower -->
+                    <g stroke="#1a1510" stroke-width="1.6">
+                        <polygon points="256,18 206,86 306,86" fill="#4f463b"/>
+                        <polygon points="256,18 256,86 306,86" fill="#2e2820" opacity="0.65"/>
+                        <path d="M245,35 L215,82 M235,50 L225,82 M265,35 L295,82 M275,50 L285,82" stroke="#1a1510" stroke-width="1"/>
+                        <rect x="200" y="84" width="112" height="6" fill="#3b332a"/>
+                        <rect x="208" y="90" width="96" height="72" fill="#b0a692"/>
+                        <rect x="262" y="90" width="42" height="72" fill="url(#crosshatch)"/>
+                        <path d="M228,158 L228,116 C228,98 276,98 276,116 L276,158 Z" fill="#211c16"/>
+                        <path d="M252,104 L252,114" stroke="#d4ccb8" stroke-width="2"/>
+                        <path d="M242,114 C239,124 238,132 233,138 L271,138 C266,132 265,124 262,114 Z" fill="#9c927e" stroke="#1a1510" stroke-width="1.3"/>
+                        <circle cx="252" cy="141" r="3" fill="#d4ccb8"/>
+                        <rect x="203" y="160" width="106" height="6" fill="#594e40"/>
+                        <rect x="208" y="166" width="96" height="76" fill="#9e937f"/>
+                        <rect x="260" y="166" width="44" height="76" fill="url(#hatch)"/>
+                        <rect x="247" y="182" width="8" height="24" rx="4" fill="#1e1914"/>
+                        <path d="M208,185 L304,185 M208,205 L304,205 M208,225 L304,225 M232,166 L232,185 M278,185 L278,205 M238,205 L238,225" stroke="#362e24" stroke-width="0.9" opacity="0.65"/>
+                    </g>
+
+                    <path d="M135,245 Q185,205 245,232 Q285,212 345,245" fill="#c2bba8" stroke="#241e18" stroke-width="1.3"/>
+                    <path d="M165,148 L225,108" stroke="#241e18" stroke-width="1" stroke-dasharray="3 2"/>
+                </svg>
+            `,
+            oscar: `
+                <svg viewBox="0 0 500 260" class="w-full h-full">
+                    <path d="M60,245 L60,40 C60,10 440,10 440,40 L440,245" fill="none" stroke="#2b241c" stroke-width="2"/>
+                    <polygon points="150,10 240,10 360,245 210,245" fill="#dcd5c5" opacity="0.35"/>
+                    <path d="M160,15 L230,235 M195,15 L275,235 M230,15 L325,235" stroke="#3b3228" stroke-width="0.7" stroke-dasharray="6 6" opacity="0.5"/>
+                    <g stroke="#29221a" stroke-width="1.2" fill="#9c917e">
+                        <rect x="75" y="150" width="48" height="22"/>
+                        <rect x="95" y="172" width="55" height="24"/>
+                        <rect x="70" y="196" width="65" height="28"/>
+                        <rect x="360" y="168" width="58" height="24"/>
+                        <rect x="345" y="192" width="70" height="28"/>
+                    </g>
+                    <g stroke="#1c1611" stroke-width="1.5" fill="#7d7364">
+                        <path d="M150,238 Q220,130 325,238 Z" fill="#635a4c"/>
+                        <path d="M225,95 C225,75 258,75 258,95 L262,118 L242,126 L222,118 Z" fill="#aba190"/>
+                        <path d="M228,104 L256,104 M232,110 L252,110" stroke="#1c1611" stroke-width="1.6"/>
+                        <path d="M198,125 C215,112 268,112 282,130 L295,198 L190,198 Z" fill="#857b6a"/>
+                        <circle cx="206" cy="136" r="16" fill="#9e9482"/>
+                        <circle cx="274" cy="138" r="16" fill="#9e9482"/>
+                        <path d="M168,145 L202,138 L196,205 L172,218 Z" fill="#4f463b"/>
+                        <path d="M248,176 L256,176 L262,192 C262,202 242,202 242,192 Z" fill="#e6be70" stroke="#1c1611" stroke-width="1.4"/>
+                        <path d="M318,92 L310,235" stroke="#1c1611" stroke-width="3.5"/>
+                        <path d="M298,122 L334,126" stroke="#1c1611" stroke-width="3"/>
+                    </g>
+                </svg>
+            `,
+            lordvessel: `
+                <svg viewBox="0 0 500 260" class="w-full h-full">
+                    <g stroke="#2c241b" stroke-width="1.1" fill="none">
+                        <circle cx="250" cy="115" r="95" stroke-dasharray="4 3"/>
+                        <circle cx="250" cy="115" r="125" stroke-dasharray="2 4"/>
+                        <path d="M250,20 L250,5 M155,115 L120,115 M345,115 L380,115 M180,48 L150,22 M320,48 L350,22"/>
+                        <rect x="75" y="25" width="24" height="210" fill="#8f8573"/>
+                        <rect x="401" y="25" width="24" height="210" fill="#8f8573"/>
+                    </g>
+                    <g stroke="#1b1510" stroke-width="1.6" fill="#7a705f">
+                        <polygon points="150,240 350,240 320,195 180,195"/>
+                        <rect x="195" y="172" width="110" height="23" fill="#8f8471"/>
+                    </g>
+                    <g stroke="#1b1510" stroke-width="1.8">
+                        <path d="M145,98 C145,158 205,172 250,172 C295,172 355,158 355,98 Z" fill="#b5ab96"/>
+                        <ellipse cx="250" cy="98" rx="105" ry="18" fill="#4f463b"/>
+                        <path d="M162,118 Q250,145 338,118" fill="none" stroke="#241d15" stroke-width="1.5"/>
+                        <path d="M180,136 Q250,158 320,136" fill="none" stroke="#241d15" stroke-width="1.2"/>
+                        <path d="M215,95 Q225,52 242,65 Q252,25 264,58 Q282,45 285,95" fill="#dfd7c6" stroke="#241d15" stroke-width="1.3"/>
+                    </g>
+                </svg>
+            `,
+            lordsouls: `
+                <svg viewBox="0 0 500 260" class="w-full h-full">
+                    <path d="M175,240 L195,115 C195,65 305,65 305,115 L325,240" fill="#362e25" stroke="#1a1510" stroke-width="2"/>
+                    <path d="M210,240 L220,130 C220,95 280,95 280,130 L290,240" fill="#b8af9c" stroke="#1a1510" stroke-width="1.5"/>
+                    <g stroke="#1a1510" stroke-width="1.5">
+                        <path d="M85,155 Q72,105 98,75 Q112,48 118,88 Q134,115 112,155 Z" fill="#8a806e"/>
+                        <ellipse cx="100" cy="160" rx="26" ry="7" fill="#473e33"/>
+                        <path d="M165,115 Q155,68 178,42 Q192,20 198,58 Q210,82 190,115 Z" fill="#ab9f8c"/>
+                        <ellipse cx="178" cy="120" rx="22" ry="6" fill="#473e33"/>
+                        <path d="M312,115 Q302,68 322,42 Q335,20 342,58 Q355,82 335,115 Z" fill="#ab9f8c"/>
+                        <ellipse cx="324" cy="120" rx="22" ry="6" fill="#473e33"/>
+                        <path d="M388,155 Q376,105 398,75 Q412,48 418,88 Q434,115 415,155 Z" fill="#8a806e"/>
+                        <ellipse cx="402" cy="160" rx="26" ry="7" fill="#473e33"/>
+                    </g>
+                    <path d="M100,160 L250,215 M178,120 L250,215 M324,120 L250,215 M402,160 L250,215" stroke="#2b231b" stroke-width="1.2" stroke-dasharray="4 3"/>
+                    <circle cx="250" cy="215" r="14" fill="#d9d1c1" stroke="#1a1510" stroke-width="2"/>
+                </svg>
+            `
+        };
+
+        /* --- Complete 14-Game Backlog Quest List --- */
+        const defaultQuestsData = [
+            {
+                id: 'ds3',
+                titleRu: 'Dark Souls 3',
+                titleEn: 'Пепел ищет угли • The Fire Fades',
+                iconKey: 'bonfire',
+                illustrationKey: 'ds3',
+                completed: false,
+                lore: `Колокола прозвенели, но Повелители Пепла покинули свои троны. Негорящему предстоит пройти сквозь угасающий Лотрик, вернуть беглецов в Храм Огня и решить судьбу Первого Пламени.`,
+                objectives: [
+                    { text: 'Одолеть Хранителей Бездны, Йорма и Олдрика', done: false },
+                    { text: 'Пройти Архивы и сразить Принца Лориана', done: false },
+                    { text: 'Закрыть DLC: Ариандель и Город за Стеной (Гаэль и Мидир)', done: false }
+                ]
+            },
+            {
+                id: 'bloodborne',
+                titleRu: 'Bloodborne',
+                titleEn: 'Ночь Охоты в Ярнаме • Fear the Old Blood',
+                iconKey: 'cleaver',
+                illustrationKey: 'bloodborne',
+                completed: false,
+                lore: `Проклятый город Ярнам охвачен чумой зверя. В поисках Бледной Крови Охотнику предстоит шагнуть за грань ночного кошмара, раскрыть тайны Церкви Исцеления и взглянуть в глаза Великим.`,
+                objectives: [
+                    { text: 'Пережить кровавую ночь в Ярнаме и сжечь Старых Охотников', done: false },
+                    { text: 'Пройти лабиринты Чаш и сокрушить Сироту Кос', done: false },
+                    { text: 'Принять свою судьбу во Сне Охотника', done: false }
+                ]
+            },
+            {
+                id: 'liesofp',
+                titleRu: 'Lies of P',
+                titleEn: 'Безумие марионеток Крата • Lies of Puppetry',
+                iconKey: 'lantern',
+                illustrationKey: 'liesofp',
+                completed: false,
+                lore: `Прекрасный город Крат погрузился в хаос восстания автоматонов и каменной болезни. Марионетке Джеппетто предстоит научиться лгать, чтобы обрести человечность и спасти разрушенный мир.`,
+                objectives: [
+                    { text: 'Очистить улицы Крата от взбесившихся кукол', done: false },
+                    { text: 'Раскрыть заговор Алхимиков на Острове', done: false },
+                    { text: 'Одолеть Безымянную Марионетку', done: false }
+                ]
+            },
+            {
+                id: 'mortalshell2',
+                titleRu: 'Mortal Shell 2',
+                titleEn: 'Новые бренные оболочки • Foundling\'s Return',
+                iconKey: 'vessel',
+                illustrationKey: 'oscar',
+                completed: false,
+                lore: `Продолжение мрачного странствия среди руин чуждого мира. Бесплотному существу вновь предстоит вселяться в павших воинов, осваивать их боевые стили и закалять свою плоть в камне.`,
+                objectives: [
+                    { text: 'Отыскать все уцелевшие Оболочки павших воинов', done: false },
+                    { text: 'Изучить новые святилища и тайны Нерожденного', done: false },
+                    { text: 'Пройти испытание до конца', done: false }
+                ]
+            },
+            {
+                id: 'ds1_ds2',
+                titleRu: 'DS 1 и DS 2 (сомнительно)',
+                titleEn: 'Истоки проклятия • Lordran & Drangleic',
+                iconKey: 'bell',
+                illustrationKey: 'bells',
+                completed: false,
+                lore: `Древние хроники Лордрана и туманного Дранглика. Путь туда тернист, механики суровы и архаичны, а сомнения велики — но именно здесь зародилась легенда о Знаке Тьмы.`,
+                objectives: [
+                    { text: 'Решить, стоит ли вообще лезть в Чумной Город и Храм Аманы', done: false },
+                    { text: 'Проверить нервы на Орнштейне и Смоуге (DS1)', done: false },
+                    { text: 'Попытаться пережить хитбоксы и Маджулу в DS2', done: false }
+                ]
+            },
+            {
+                id: 'lotf',
+                titleRu: 'Lords of the Fallen (тоже сомнительно)',
+                titleEn: 'Между Аксиомом и Умбралом • In Light We Walk',
+                iconKey: 'lantern',
+                illustrationKey: 'lordsouls',
+                completed: false,
+                lore: `Крестовый поход Тёмного Крестоносца с фонарём Умбрала наперевес. Двуединый мир живых и мёртвых манит мрачной готикой, хотя путь этот вызывает немало вопросов у бывалых странников.`,
+                objectives: [
+                    { text: 'Оценить механику фонаря и мира мёртвых Умбрал', done: false },
+                    { text: 'Очистить маяки от скверны Адыра', done: false },
+                    { text: 'Решить: проходить до титров или дропнуть со спокойной душой', done: false }
+                ]
+            },
+            {
+                id: 'demonsouls',
+                titleRu: 'Demon Souls (это ваще ахуй будет)',
+                titleEn: 'Туман над Болетарией • Umbasa',
+                iconKey: 'trophy',
+                illustrationKey: 'lordvessel',
+                completed: false,
+                lore: `Прародитель всех страданий и абсолютное величие. Король Аллант пробудил Старейшего, и бесцветный туман поглотил Болетарию. Впереди — чистый восторг, боль и легендарная атмосфера Нексуса.`,
+                objectives: [
+                    { text: 'Войти в бесцветный туман Болетарии', done: false },
+                    { text: 'Покорить все пять архикамней Нексуса', done: false },
+                    { text: 'Узреть величие и сказать «Умбаса»', done: false }
+                ]
+            },
+            {
+                id: 'sekiro',
+                titleRu: 'Sekiro',
+                titleEn: 'Тени умирают дважды • Hesitation is Defeat',
+                iconKey: 'katana',
+                illustrationKey: 'eastern',
+                completed: false,
+                lore: `Эпоха Сэнгоку на излёте. Однорукий шиноби Волк связан клятвой защищать Божественного Наследника Куро. Здесь не помогут перекаты и щиты — только звон стали, идеальные парирования и концентрация.`,
+                objectives: [
+                    { text: 'Выучить ритм клинков и победить Гэнитиро Асина', done: false },
+                    { text: 'Одолеть Филина и Демона Ненависти', done: false },
+                    { text: 'Сойтись в финальной дуэли с Иссином, Мастером Меча', done: false }
+                ]
+            },
+            {
+                id: 'nioh',
+                titleRu: 'Nioh',
+                titleEn: 'Самурай среди ёкаев • Defy Death',
+                iconKey: 'katana',
+                illustrationKey: 'eastern',
+                completed: false,
+                lore: `Мрачная Япония, раздираемая войной кланов и наводнённая демонами-ёкаями из мира Тьмы. Мореплавателю Уильяму предстоит освоить стойки клинка, пульсацию Ки и силу духов-хранителей.`,
+                objectives: [
+                    { text: 'Освоить переключение стоек и Пульсацию Ки', done: false },
+                    { text: 'Изгнать ёкаев и раскрыть интриги Эдварда Келли', done: false },
+                    { text: 'Выжить в Бездне и дополнениях', done: false }
+                ]
+            },
+            {
+                id: 'wolong',
+                titleRu: 'Wo Long (комп мощный нужен)',
+                titleEn: 'Павшая династия Хань • Crouching Dragon',
+                iconKey: 'katana',
+                illustrationKey: 'eastern',
+                completed: false,
+                lore: `Эпоха Троецарствия в огне демонического эликсира. Молниеносные дуэли, система боевого духа и отражение сокрушительных ударов — но сперва нужно подготовить достойную кузницу железа (мощный ПК).`,
+                objectives: [
+                    { text: 'Обновить железо ПК, чтобы не тормозило на боссах', done: false },
+                    { text: 'Укротить Люй Бу у врат Хулао', done: false },
+                    { text: 'Сокрушить демонов Троецарствия', done: false }
+                ]
+            },
+            {
+                id: 'wukong',
+                titleRu: 'Black Myth: Wukong (комп мощный нужен)',
+                titleEn: 'Путь Избранного • Journey to the West',
+                iconKey: 'crown',
+                illustrationKey: 'eastern',
+                completed: false,
+                lore: `Величественный восточный эпос по мотивам «Путешествия на Запад». Обезьяний царь Сунь Укун пал, и новому Избранному предстоит собрать Шесть Реликвий — когда мощность компьютера позволит узреть эту красоту.`,
+                objectives: [
+                    { text: 'Собрать мощный ПК под Unreal Engine 5', done: false },
+                    { text: 'Овладеть посохом Цзиньгубан и заклинаниями превращений', done: false },
+                    { text: 'Собрать все реликвии Великого Мудреца, Равного Небу', done: false }
+                ]
+            },
+            {
+                id: 'khazan',
+                titleRu: 'Khazan the first berserker',
+                titleEn: 'Кровавая месть генерала • Blade Phantom',
+                iconKey: 'cleaver',
+                illustrationKey: 'oscar',
+                completed: false,
+                lore: `Великий генерал Хазан был ложно обвинён в измене, подвергнут пыткам и изгнан в заснеженные горы. Заключив сделку с Призраком Клинка, первый берсерк возвращается за кровавой расплатой.`,
+                objectives: [
+                    { text: 'Выжить в снегах и пробудить силу Призрака Клинка', done: false },
+                    { text: 'Сокрушить бывших соратников и чудовищ Империи', done: false },
+                    { text: 'Свершить кровавую месть генерала Хазана', done: false }
+                ]
+            },
+            {
+                id: 'archthrones',
+                titleRu: 'Dark Souls: Archthrones',
+                titleEn: 'Пять престолов • Overhaul Mod',
+                iconKey: 'crown',
+                illustrationKey: 'lordsouls',
+                completed: false,
+                lore: `Масштабная фанатская предыстория вселенной Тёмных Душ. События разворачиваются вокруг пяти Архитронов, открывающих путь в переосмысленные земли Картуса, Элеум Лойс и Храма Глубин.`,
+                objectives: [
+                    { text: 'Установить мод и отправиться к Нексусу Углей', done: false },
+                    { text: 'Исследовать все 5 миров Архитронов', done: false },
+                    { text: 'Одолеть новых боссов и рыцарей серебряного легиона', done: false }
+                ]
+            },
+            {
+                id: 'valormortis',
+                titleRu: 'Valor Mortis',
+                titleEn: 'Пепел Наполеоновских войн • Resurrection & Plague',
+                iconKey: 'cleaver',
+                illustrationKey: 'napoleonic',
+                completed: false,
+                lore: `Мрачный альтернативный XIX век, где поля сражений Наполеоновских войн пропитаны сверхъестественной чумой. Восставшему из мёртвых солдату предстоит прорубать путь сквозь мутировавшую гвардию с саблей и мушкетом.`,
+                objectives: [
+                    { text: 'Восстать из братской могилы Великой Армии', done: false },
+                    { text: 'Освоить бой от первого лица: мушкет, сабля и мутации', done: false },
+                    { text: 'Раскрыть источник чумы на полях Европы', done: false }
+                ]
+            }
+        ];
+
+        const STORAGE_KEY = 'souls_backlog_journal_v1';
+        let questsData = [];
+        let activeQuestIndex = 0;
+        let bannerTimeout = null;
+
+        function loadQuestsState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        questsData = parsed;
+                        return;
+                    }
+                }
+            } catch (e) {}
+            questsData = JSON.parse(JSON.stringify(defaultQuestsData));
+        }
+
+        function saveQuestsState() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(questsData));
+            } catch (e) {}
+        }
+
+        const questListContainer = document.getElementById('questListContainer');
+        const timelineDiamond = document.getElementById('timelineDiamond');
+        const parchmentContent = document.getElementById('parchmentContent');
+        const questIllustration = document.getElementById('questIllustration');
+        const questLore = document.getElementById('questLore');
+        const questObjectives = document.getElementById('questObjectives');
+        const parchmentSeal = document.getElementById('parchmentSeal');
+        const toggleQuestCompleteBtn = document.getElementById('toggleQuestCompleteBtn');
+        const questProgressCounter = document.getElementById('questProgressCounter');
+        const dsBannerOverlay = document.getElementById('dsBannerOverlay');
+        const dsBannerTitle = document.getElementById('dsBannerTitle');
+        const dsBannerSub = document.getElementById('dsBannerSub');
+
+        /* --- Show Dramatic Dark Souls Completion Banner --- */
+        function triggerDarkSoulsBanner(titleText = 'ЗАДАНИЕ ВЫПОЛНЕНО', subText = 'QUEST COMPLETED') {
+            if (bannerTimeout) clearTimeout(bannerTimeout);
+            dsBannerTitle.textContent = titleText;
+            dsBannerSub.textContent = subText;
+            // Reset animation
+            dsBannerTitle.style.animation = 'none';
+            void dsBannerTitle.offsetWidth;
+            dsBannerTitle.style.animation = '';
+
+            dsBannerOverlay.classList.add('show');
+            bannerTimeout = setTimeout(() => {
+                dsBannerOverlay.classList.remove('show');
+            }, 2200);
+        }
+
+        /* --- Toggle Entire Quest Completion (To-Do Style) --- */
+        function toggleQuestCompletion(index, forceState = null) {
+            const quest = questsData[index];
+            if (!quest) return;
+
+            const newState = forceState !== null ? forceState : !quest.completed;
+            quest.completed = newState;
+
+            // Sync all sub-objectives when toggling the whole quest
+            if (quest.objectives && quest.objectives.length > 0) {
+                quest.objectives.forEach(obj => {
+                    obj.done = newState;
+                });
+            }
+
+            if (newState) {
+                SoundFX.playQuestComplete();
+                triggerDarkSoulsBanner('ЗАДАНИЕ ВЫПОЛНЕНО', quest.titleEn.replace(/[«»]/g, ''));
+            } else {
+                SoundFX.playCheck(false);
+            }
+
+            saveQuestsState();
+            renderQuestList();
+            renderParchmentDetails();
+        }
+
+        /* --- Render Left Quest List --- */
+        function renderQuestList() {
+            questListContainer.innerHTML = '';
+
+            // Update progress counter
+            const completedCount = questsData.filter(q => q.completed).length;
+            questProgressCounter.textContent = `${completedCount} / ${questsData.length} Выполнено`;
+
+            questsData.forEach((quest, idx) => {
+                const isActive = idx === activeQuestIndex;
+                const isDone = Boolean(quest.completed);
+                const doneTasks = quest.objectives ? quest.objectives.filter(o => o.done).length : 0;
+                const totalTasks = quest.objectives ? quest.objectives.length : 0;
+
+                const item = document.createElement('div');
+                item.className = `quest-item cursor-pointer py-3 px-3.5 flex items-center justify-between gap-3 ${isActive ? 'active' : 'opacity-85 hover:opacity-100'} ${isDone ? 'quest-completed' : ''}`;
+                item.dataset.index = idx;
+
+                const iconSvg = QuestIcons[quest.iconKey] || QuestIcons.bonfire;
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                        <!-- Interactive To-Do Checkbox for Closing/Completing Quest Directly -->
+                        <button 
+                            type="button"
+                            title="${isDone ? 'Вернуть квест в активные' : 'Закрыть квест (Выполнено)'}"
+                            class="quest-status-check flex items-center justify-center rounded-[2px] ${isDone ? 'completed' : ''}"
+                            data-check-index="${idx}">
+                            ${isDone ? `
+                                <svg viewBox="0 0 20 20" class="w-4 h-4 text-[#ffe39f] drop-shadow-[0_0_4px_rgba(255,190,60,0.9)]">
+                                    <path d="M4,10.5 L8,14.5 L16,5.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            ` : ''}
+                        </button>
+
+                        <div class="quest-icon-wrap flex-shrink-0 w-11 h-11 flex items-center justify-center transition">
+                            ${iconSvg}
+                        </div>
+
+                        <div class="flex flex-col min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="quest-title-text text-[19px] sm:text-[21px] leading-snug font-semibold tracking-wide truncate ${isActive ? 'text-[#f2ead9]' : 'text-[#ccc5b8]'}">
+                                    ${quest.titleRu}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="quest-subtitle-text text-[14px] sm:text-[15px] leading-tight truncate ${isActive ? 'text-[#c7bc9f]' : 'text-[#8e887d]'}">
+                                    ${quest.titleEn}
+                                </span>
+                                <span class="text-xs px-1.5 py-0.2 rounded-sm border ${isDone ? 'border-[#8f6f32] bg-[#302410]/80 text-[#e8c67a]' : 'border-[#3d3830] bg-[#161513]/70 text-[#9c9384]'}">
+                                    ${isDone ? 'ВЫПОЛНЕНО' : `${doneTasks}/${totalTasks}`}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Clicking the checkbox toggles completion without switching if already active, or switches & toggles
+                const checkBtn = item.querySelector('[data-check-index]');
+                checkBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    activeQuestIndex = idx;
+                    toggleQuestCompletion(idx);
+                });
+
+                // Clicking the row selects the quest
+                item.addEventListener('click', () => selectQuest(idx));
+                questListContainer.appendChild(item);
+            });
+
+            // Position the glowing diamond indicator alongside the active quest item
+            requestAnimationFrame(() => {
+                const activeEl = questListContainer.children[activeQuestIndex];
+                if (activeEl) {
+                    const offsetTop = activeEl.offsetTop + (activeEl.offsetHeight / 2) - 7;
+                    timelineDiamond.style.top = `${offsetTop}px`;
+                }
+            });
+        }
+
+        /* --- Render Right Parchment Details --- */
+        function renderParchmentDetails() {
+            const quest = questsData[activeQuestIndex];
+            if (!quest) return;
+
+            // Show/hide wax seal stamp
+            if (quest.completed) {
+                parchmentSeal.classList.remove('hidden');
+            } else {
+                parchmentSeal.classList.add('hidden');
+            }
+
+            // Update Complete/Reopen Button on Parchment
+            if (quest.completed) {
+                toggleQuestCompleteBtn.textContent = '↺ Вернуть в активные';
+                toggleQuestCompleteBtn.className = 'px-3.5 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider border border-[#594e3f] bg-[#9c917d]/50 hover:bg-[#8a7f6b]/70 text-[#2b241b] transition rounded-sm';
+            } else {
+                toggleQuestCompleteBtn.textContent = '✓ Завершить задание';
+                toggleQuestCompleteBtn.className = 'px-3.5 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider border border-[#382b1e] bg-[#2e2419] hover:bg-[#453524] text-[#f0dfb8] transition rounded-sm shadow-sm';
+            }
+
+            // Illustration & Lore
+            questIllustration.innerHTML = InkIllustrations[quest.illustrationKey] || InkIllustrations.bells;
+            questLore.textContent = quest.lore;
+
+            // Objectives with interactive checkboxes & delete button for custom tasks
+            questObjectives.innerHTML = '';
+            quest.objectives.forEach((obj, objIdx) => {
+                const row = document.createElement('div');
+                row.className = 'objective-row flex items-start justify-between gap-2 cursor-pointer group py-0.5';
+                row.innerHTML = `
+                    <div class="flex items-start gap-3.5 flex-1">
+                        <div class="ds-checkbox mt-1 flex items-center justify-center">
+                            ${obj.done ? `
+                                <svg viewBox="0 0 18 18" class="w-4 h-4 text-[#2b1f14]">
+                                    <path d="M3,9 L7,13 L15,4" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            ` : ''}
+                        </div>
+                        <span class="text-[15px] sm:text-[16px] leading-[1.38] transition-colors ${obj.done ? 'line-through text-[#595043]' : 'text-[#1a1612] group-hover:text-black'}">
+                            ${obj.text}
+                        </span>
+                    </div>
+                    ${quest.objectives.length > 1 ? `
+                        <button type="button" title="Удалить задачу" class="delete-obj-btn opacity-0 group-hover:opacity-75 hover:!opacity-100 text-[#5c261c] text-xs px-1.5 py-0.5 transition">
+                            ✕
+                        </button>
+                    ` : ''}
+                `;
+
+                // Toggle individual sub-objective and auto-update quest completion status
+                row.addEventListener('click', (e) => {
+                    if (e.target.closest('.delete-obj-btn')) return;
+                    obj.done = !obj.done;
+
+                    const allDone = quest.objectives.length > 0 && quest.objectives.every(o => o.done);
+                    const wasCompleted = quest.completed;
+                    quest.completed = allDone;
+
+                    if (allDone && !wasCompleted) {
+                        SoundFX.playQuestComplete();
+                        triggerDarkSoulsBanner('ЗАДАНИЕ ВЫПОЛНЕНО', quest.titleEn.replace(/[«»]/g, ''));
+                    } else {
+                        SoundFX.playCheck(obj.done);
+                    }
+
+                    saveQuestsState();
+                    renderQuestList();
+                    renderParchmentDetails();
+                });
+
+                const delBtn = row.querySelector('.delete-obj-btn');
+                if (delBtn) {
+                    delBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        quest.objectives.splice(objIdx, 1);
+                        quest.completed = quest.objectives.length > 0 && quest.objectives.every(o => o.done);
+                        SoundFX.playSelect();
+                        saveQuestsState();
+                        renderQuestList();
+                        renderParchmentDetails();
+                    });
+                }
+
+                questObjectives.appendChild(row);
+            });
+        }
+
+        /* --- Switch Active Quest with Smooth Fade --- */
+        function selectQuest(index) {
+            if (index === activeQuestIndex) return;
+            activeQuestIndex = index;
+            SoundFX.playSelect();
+            renderQuestList();
+
+            parchmentContent.classList.add('fade-out');
+            setTimeout(() => {
+                renderParchmentDetails();
+                parchmentContent.classList.remove('fade-out');
+            }, 180);
+        }
+
+        /* --- Floating Bonfire & Corner Ember Particles Canvas --- */
+        function initEmberParticles() {
+            const canvas = document.getElementById('emberCanvas');
+            const ctx = canvas.getContext('2d');
+            let width = canvas.width = window.innerWidth;
+            let height = canvas.height = window.innerHeight;
+
+            window.addEventListener('resize', () => {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+                renderQuestList();
+            });
+
+            const embers = [];
+            const EMBER_COUNT = 55;
+
+            function createEmber(initial = false) {
+                // Spawn mostly near bottom-center bonfire or corners
+                const spawnType = Math.random();
+                let x, y;
+                if (spawnType < 0.72) {
+                    // Bonfire area (center bottom)
+                    x = width * 0.5 + (Math.random() - 0.5) * 260;
+                    y = initial ? height * (0.45 + Math.random() * 0.55) : height * 0.85 + Math.random() * 60;
+                } else {
+                    // Near the 4 rune corners
+                    const leftSide = Math.random() < 0.5;
+                    x = leftSide ? Math.random() * 140 : width - Math.random() * 140;
+                    y = initial ? Math.random() * height : height - Math.random() * 150;
+                }
+
+                return {
+                    x,
+                    y,
+                    vx: (Math.random() - 0.45) * 0.65,
+                    vy: -(0.35 + Math.random() * 1.15),
+                    size: 1 + Math.random() * 2.4,
+                    alpha: 0.2 + Math.random() * 0.75,
+                    wobble: Math.random() * Math.PI * 2,
+                    wobbleSpeed: 0.02 + Math.random() * 0.04,
+                    color: Math.random() > 0.35 ? '#ff7b1a' : '#ffcf66'
+                };
+            }
+
+            for (let i = 0; i < EMBER_COUNT; i++) {
+                embers.push(createEmber(true));
+            }
+
+            function animateEmbers() {
+                ctx.clearRect(0, 0, width, height);
+
+                for (let i = 0; i < embers.length; i++) {
+                    const p = embers[i];
+                    p.wobble += p.wobbleSpeed;
+                    p.x += p.vx + Math.sin(p.wobble) * 0.3;
+                    p.y += p.vy;
+                    p.alpha -= 0.0022;
+
+                    if (p.alpha <= 0 || p.y < -20) {
+                        embers[i] = createEmber(false);
+                        continue;
+                    }
+
+                    ctx.save();
+                    ctx.globalAlpha = Math.max(0, p.alpha);
+                    ctx.fillStyle = p.color;
+                    ctx.shadowColor = '#ff5500';
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                requestAnimationFrame(animateEmbers);
+            }
+
+            animateEmbers();
+        }
+
+        /* --- Setup Interactive Forms & Buttons --- */
+        function initFormsAndActions() {
+            // Complete/Reopen button on the right parchment card
+            toggleQuestCompleteBtn.addEventListener('click', () => {
+                toggleQuestCompletion(activeQuestIndex);
+            });
+
+            // Add new sub-objective to current quest
+            const addObjectiveForm = document.getElementById('addObjectiveForm');
+            const newObjectiveInput = document.getElementById('newObjectiveInput');
+            addObjectiveForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const val = newObjectiveInput.value.trim();
+                if (!val) return;
+                const quest = questsData[activeQuestIndex];
+                if (!quest) return;
+
+                quest.objectives.push({ text: val, done: false });
+                quest.completed = false;
+                newObjectiveInput.value = '';
+                SoundFX.playCheck(true);
+                saveQuestsState();
+                renderQuestList();
+                renderParchmentDetails();
+            });
+
+            // Add new custom quest to the journal list
+            const addQuestForm = document.getElementById('addQuestForm');
+            const newQuestInput = document.getElementById('newQuestInput');
+            addQuestForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const val = newQuestInput.value.trim();
+                if (!val) return;
+
+                const icons = ['bell', 'bonfire', 'vessel', 'trophy'];
+                const illustrations = ['bells', 'oscar', 'lordvessel', 'lordsouls'];
+                const pickIdx = questsData.length % 4;
+
+                const newQuest = {
+                    id: 'custom_' + Date.now(),
+                    titleRu: `«${val}»`,
+                    titleEn: '«Path of the Chosen Undead»',
+                    iconKey: icons[pickIdx],
+                    illustrationKey: illustrations[pickIdx],
+                    completed: false,
+                    lore: `Запись, оставленная у пламени костра: странствие продолжается сквозь пепел и туман Лордрана. Чтобы не утратить рассудок и не обратиться в Полого, Избранный Нежить начертал эту цель на ветхом пергаменте.`,
+                    objectives: [
+                        { text: val, done: false }
+                    ]
+                };
+
+                questsData.push(newQuest);
+                activeQuestIndex = questsData.length - 1;
+                newQuestInput.value = '';
+                SoundFX.playSelect();
+                saveQuestsState();
+                renderQuestList();
+                renderParchmentDetails();
+            });
+
+            // Reset Journal back to canonical Dark Souls state
+            document.getElementById('resetJournalBtn').addEventListener('click', () => {
+                questsData = JSON.parse(JSON.stringify(defaultQuestsData));
+                activeQuestIndex = 0;
+                SoundFX.playSelect();
+                saveQuestsState();
+                renderQuestList();
+                renderParchmentDetails();
+            });
+        }
+
+        /* --- Initialize App on Load --- */
+        window.onload = function () {
+            loadQuestsState();
+            renderQuestList();
+            renderParchmentDetails();
+            initFormsAndActions();
+            initEmberParticles();
+        };
+    </script>
+</body>
+</html>
